@@ -11,10 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HRConnect.Domain\HRConnect.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Repositories\" />
+	<ProjectReference Include="..\HRConnect.Application\HRConnect.Application.csproj" />  
   </ItemGroup>
 
   <PropertyGroup>
