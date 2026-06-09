@@ -1,0 +1,31 @@
+# Build folders
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+
+# Logs
+*.log
+
+# NuGet
+*.nupkg
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Publish output
+publish/
+
+# EF Local DB files
+*.mdf
+*.ldf
