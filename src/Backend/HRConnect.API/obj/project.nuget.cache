@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "QSG9Uh3mVe0=",
+  "success": true,
+  "projectFilePath": "E:\\HRConnect-HRMS\\src\\Backend\\HRConnect.API\\HRConnect.API.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Sharath.Devaraj\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.8\\microsoft.aspnetcore.openapi.10.0.8.nupkg.sha512",
+    "C:\\Users\\Sharath.Devaraj\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
