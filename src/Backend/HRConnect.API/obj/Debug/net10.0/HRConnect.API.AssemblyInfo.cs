@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HRConnect.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7b6e1908670b5133281decc780d962f964d83fef")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5ebd39459902f98422891670c292ce855fa8b3f2")]
 [assembly: System.Reflection.AssemblyProductAttribute("HRConnect.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HRConnect.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
