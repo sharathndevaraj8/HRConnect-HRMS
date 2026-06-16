@@ -1,3 +1,4 @@
+using HRConnect.API.Middleware;
 using HRConnect.Application.Interfaces;
 using HRConnect.Application.Services;
 using HRConnect.Infrastructure.Data;
@@ -29,6 +30,7 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
