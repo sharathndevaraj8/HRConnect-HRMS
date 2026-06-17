@@ -16,6 +16,12 @@ obj/
 # Logs
 *.log
 
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
 # NuGet
 *.nupkg
 
