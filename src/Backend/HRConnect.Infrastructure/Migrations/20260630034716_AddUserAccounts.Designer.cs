@@ -4,6 +4,7 @@ using HRConnect.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HRConnect.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630034716_AddUserAccounts")]
+    partial class AddUserAccounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -110,45 +113,6 @@ namespace HRConnect.Infrastructure.Migrations
                     b.ToTable("LeaveRequests");
                 });
 
-            modelBuilder.Entity("HRConnect.Domain.Entities.RefreshToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReplacedByTokenHash")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<int>("UserAccountId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("UserAccountId");
-
-                    b.ToTable("RefreshTokens");
-                });
-
             modelBuilder.Entity("HRConnect.Domain.Entities.UserAccount", b =>
                 {
                     b.Property<int>("Id")
@@ -194,17 +158,6 @@ namespace HRConnect.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("UserAccounts");
-                });
-
-            modelBuilder.Entity("HRConnect.Domain.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("HRConnect.Domain.Entities.UserAccount", "UserAccount")
-                        .WithMany()
-                        .HasForeignKey("UserAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("UserAccount");
                 });
 #pragma warning restore 612, 618
         }

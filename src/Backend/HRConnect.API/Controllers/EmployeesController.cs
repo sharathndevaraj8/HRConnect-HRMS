@@ -1,6 +1,7 @@
 using HRConnect.Application.DTOs;
 using HRConnect.Application.Interfaces;
 using HRConnect.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HRConnect.API.Controllers;
@@ -9,6 +10,7 @@ namespace HRConnect.API.Controllers;
 /// API controller that exposes CRUD and list endpoints for employees.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class EmployeesController : ControllerBase
 {
