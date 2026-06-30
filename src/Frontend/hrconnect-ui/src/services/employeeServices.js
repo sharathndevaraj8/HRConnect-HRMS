@@ -1,9 +1,16 @@
 import axios from "axios";
 
-const API_BASE_URL = "https://localhost:7030/api/employees";
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ?? "https://localhost:7030/api/employees";
 
-export const getEmployees = async () => {
-    const response = await axios.get(API_BASE_URL);
+export const getEmployees = async ({ search = "", pageNumber = 1, pageSize = 25 } = {}) => {
+    const response = await axios.get(API_BASE_URL, {
+        params: {
+            search,
+            pageNumber,
+            pageSize,
+        },
+    });
     return response.data;
 };
 

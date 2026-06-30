@@ -16,87 +16,293 @@ const emptyForm = {
     dateOfJoining: "",
 };
 
+const emailPattern = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
+const namePattern = "^[A-Za-z][A-Za-z.'-]*(?: [A-Za-z][A-Za-z.'-]*)*$";
+const designations = [
+    "Software Engineer",
+    "Senior Software Engineer",
+    "Frontend Developer",
+    "Backend Developer",
+    "Full Stack Developer",
+    "QA Engineer",
+    "DevOps Engineer",
+    "Cloud Engineer",
+    "Data Engineer",
+    "UI/UX Designer",
+    "Business Analyst",
+    "Project Manager",
+    "Scrum Master",
+    "System Administrator",
+    "Technical Lead",
+];
+
+const pageSize = 25;
+
+function cleanName(value) {
+    return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+
+function cleanText(value) {
+    return String(value ?? "").trim();
+}
+
+function getErrorMessage(error, fallbackMessage) {
+    return error?.response?.data?.message ?? fallbackMessage;
+}
+
 function App() {
     const [employees, setEmployees] = useState([]);
-    const [formData, setFormData] = useState(emptyForm);
+    const [addFormData, setAddFormData] = useState(emptyForm);
+    const [updateFormData, setUpdateFormData] = useState(null);
+    const [currentPage, setCurrentPage] = useState("list");
     const [searchText, setSearchText] = useState("");
-    const [isEditing, setIsEditing] = useState(false);
+    const [pageNumber, setPageNumber] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [successMessage, setSuccessMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
     useEffect(() => {
         loadEmployees();
-    }, []);
+    }, [pageNumber, searchText]);
 
     async function loadEmployees() {
-        const data = await getEmployees();
-        setEmployees(data);
+        setIsLoading(true);
+        setErrorMessage("");
+
+        try {
+            const data = await getEmployees({
+                search: searchText,
+                pageNumber,
+                pageSize,
+            });
+
+            setEmployees(data.items ?? []);
+            setTotalCount(data.totalCount ?? 0);
+            setTotalPages(data.totalPages ?? 1);
+        } catch {
+            setErrorMessage("Unable to load employees. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     }
 
-    function handleChange(e) {
-        setFormData({
-            ...formData,
+    function handleAddChange(e) {
+        setSuccessMessage("");
+        setErrorMessage("");
+        setAddFormData({
+            ...addFormData,
             [e.target.name]: e.target.value,
         });
     }
 
-    async function handleSubmit(e) {
-        e.preventDefault();
-
-        if (isEditing) {
-            await updateEmployee(formData.id, {
-                ...formData,
-                id: Number(formData.id),
-            });
-        } else {
-            await createEmployee({
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                designation: formData.designation,
-                dateOfJoining: formData.dateOfJoining,
-            });
-        }
-
-        setFormData(emptyForm);
-        setIsEditing(false);
-        await loadEmployees();
-    }
-
-    function handleEdit(employee) {
-        setIsEditing(true);
-        setFormData({
-            id: employee.id,
-            firstName: employee.firstName,
-            lastName: employee.lastName,
-            email: employee.email,
-            designation: employee.designation,
-            dateOfJoining: employee.dateOfJoining?.split("T")[0],
+    function handleUpdateChange(e) {
+        setSuccessMessage("");
+        setErrorMessage("");
+        setUpdateFormData({
+            ...updateFormData,
+            [e.target.name]: e.target.value,
         });
     }
 
-    async function handleDelete(id) {
-        const confirmDelete = window.confirm("Are you sure you want to delete this employee?");
-
-        if (!confirmDelete) return;
-
-        await deleteEmployee(id);
-        await loadEmployees();
+    function handleShowAddPage() {
+        setSuccessMessage("");
+        setErrorMessage("");
+        setAddFormData(emptyForm);
+        setUpdateFormData(null);
+        setCurrentPage("add");
     }
 
-    function handleCancel() {
-        setFormData(emptyForm);
-        setIsEditing(false);
+    function handleBackToList() {
+        setCurrentPage("list");
+        setUpdateFormData(null);
     }
 
-    const filteredEmployees = employees.filter((employee) => {
-        const search = searchText.toLowerCase();
+    function handleSearchChange(e) {
+        setSearchText(e.target.value);
+        setPageNumber(1);
+    }
 
+    async function handleAddSubmit(e) {
+        e.preventDefault();
+        const firstName = cleanName(addFormData.firstName);
+        const lastName = cleanName(addFormData.lastName);
+
+        setIsSaving(true);
+        setErrorMessage("");
+
+        try {
+            await createEmployee({
+                firstName,
+                lastName,
+                email: addFormData.email.trim().toLowerCase(),
+                designation: cleanText(addFormData.designation),
+                dateOfJoining: addFormData.dateOfJoining,
+            });
+
+            setAddFormData(emptyForm);
+            setCurrentPage("list");
+            setPageNumber(1);
+            setSuccessMessage("Employee added successfully");
+            await loadEmployees();
+        } catch (error) {
+            setErrorMessage(getErrorMessage(error, "Unable to add employee. Please try again."));
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    async function handleUpdateSubmit(e) {
+        e.preventDefault();
+        const firstName = cleanName(updateFormData.firstName);
+        const lastName = cleanName(updateFormData.lastName);
+
+        setIsSaving(true);
+        setErrorMessage("");
+
+        try {
+            await updateEmployee(updateFormData.id, {
+                ...updateFormData,
+                firstName,
+                lastName,
+                email: updateFormData.email.trim().toLowerCase(),
+                designation: cleanText(updateFormData.designation),
+                id: Number(updateFormData.id),
+            });
+
+            setUpdateFormData(null);
+            setCurrentPage("list");
+            setSuccessMessage("Employee updated successfully");
+            await loadEmployees();
+        } catch (error) {
+            setErrorMessage(getErrorMessage(error, "Unable to update employee. Please try again."));
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    function handleEdit(employee) {
+        setSuccessMessage("");
+        setErrorMessage("");
+        setUpdateFormData({
+            id: employee.id,
+            firstName: cleanName(employee.firstName),
+            lastName: cleanName(employee.lastName),
+            email: employee.email,
+            designation: cleanText(employee.designation),
+            dateOfJoining: employee.dateOfJoining?.split("T")[0],
+        });
+        setCurrentPage("update");
+    }
+
+    function handleDelete(employee) {
+        setSuccessMessage("");
+        setErrorMessage("");
+        setEmployeeToDelete(employee);
+    }
+
+    function handleCloseDeleteModal() {
+        setEmployeeToDelete(null);
+    }
+
+    async function handleConfirmDelete() {
+        setIsSaving(true);
+        setErrorMessage("");
+
+        try {
+            await deleteEmployee(employeeToDelete.id);
+            setSuccessMessage("Employee deleted successfully");
+            setUpdateFormData(null);
+            setCurrentPage("list");
+            setEmployeeToDelete(null);
+            await loadEmployees();
+        } catch {
+            setErrorMessage("Unable to delete employee. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    function renderEmployeeForm(formData, onChange, onSubmit, submitLabel) {
         return (
-            employee.firstName?.toLowerCase().includes(search) ||
-            employee.lastName?.toLowerCase().includes(search) ||
-            employee.email?.toLowerCase().includes(search) ||
-            employee.designation?.toLowerCase().includes(search)
+            <form onSubmit={onSubmit} className="form">
+                <input
+                    name="firstName"
+                    pattern={namePattern}
+                    minLength="2"
+                    maxLength="50"
+                    title="Enter 2-50 letters. Single spaces, periods, apostrophes, and hyphens are allowed."
+                    placeholder="First Name"
+                    value={formData.firstName}
+                    onChange={onChange}
+                    required
+                />
+
+                <input
+                    name="lastName"
+                    pattern={namePattern}
+                    minLength="2"
+                    maxLength="50"
+                    title="Enter 2-50 letters. Single spaces, periods, apostrophes, and hyphens are allowed."
+                    placeholder="Last Name"
+                    value={formData.lastName}
+                    onChange={onChange}
+                    required
+                />
+
+                <input
+                    name="email"
+                    type="email"
+                    pattern={emailPattern}
+                    title="Enter an email like someone@something.example"
+                    placeholder="Email"
+                    value={formData.email}
+                    onChange={onChange}
+                    required
+                />
+
+                <select
+                    name="designation"
+                    value={formData.designation}
+                    onChange={onChange}
+                    required
+                >
+                    <option value="">Select Designation</option>
+                    {designations.map((designation) => (
+                        <option key={designation} value={designation}>
+                            {designation}
+                        </option>
+                    ))}
+                </select>
+
+                <input
+                    name="dateOfJoining"
+                    type="date"
+                    value={formData.dateOfJoining}
+                    onChange={onChange}
+                    required
+                />
+
+                <div className="button-row">
+                    <button type="submit" className="primary-btn" disabled={isSaving}>
+                        {isSaving ? "Saving..." : submitLabel}
+                    </button>
+
+                    <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={handleBackToList}
+                        disabled={isSaving}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
         );
-    });
+    }
 
     return (
         <div className="app">
@@ -108,128 +314,184 @@ function App() {
             </header>
 
             <main className="container">
-                <section className="card form-card">
-                    <h2>{isEditing ? "Update Employee" : "Add Employee"}</h2>
+                {successMessage && <p className="success-message">{successMessage}</p>}
+                {errorMessage && <p className="error-message">{errorMessage}</p>}
 
-                    <form onSubmit={handleSubmit} className="form">
-                        <input
-                            name="firstName"
-                            placeholder="First Name"
-                            value={formData.firstName}
-                            onChange={handleChange}
-                            required
-                        />
+                {currentPage === "add" && (
+                    <section className="card page-card">
+                        <div className="page-header">
+                            <h2>Add Employee</h2>
+                            <button type="button" className="secondary-btn" onClick={handleBackToList}>
+                                Back to Employees
+                            </button>
+                        </div>
 
-                        <input
-                            name="lastName"
-                            placeholder="Last Name"
-                            value={formData.lastName}
-                            onChange={handleChange}
-                            required
-                        />
+                        {renderEmployeeForm(addFormData, handleAddChange, handleAddSubmit, "Add")}
+                    </section>
+                )}
 
-                        <input
-                            name="email"
-                            type="email"
-                            placeholder="Email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                        />
+                {currentPage === "update" && updateFormData && (
+                    <section className="card page-card update-card">
+                        <div className="page-header">
+                            <h2>Update Employee</h2>
+                            <button type="button" className="secondary-btn" onClick={handleBackToList}>
+                                Back to Employees
+                            </button>
+                        </div>
 
-                        <input
-                            name="designation"
-                            placeholder="Designation"
-                            value={formData.designation}
-                            onChange={handleChange}
-                            required
-                        />
+                        {renderEmployeeForm(
+                            updateFormData,
+                            handleUpdateChange,
+                            handleUpdateSubmit,
+                            "Update"
+                        )}
+                    </section>
+                )}
 
-                        <input
-                            name="dateOfJoining"
-                            type="date"
-                            value={formData.dateOfJoining}
-                            onChange={handleChange}
-                            required
-                        />
+                {currentPage === "list" && (
+                    <section className="card table-card">
+                        <div className="table-header">
+                            <h2>Employees</h2>
 
-                        <div className="button-row">
-                            <button type="submit" className="primary-btn">
-                                {isEditing ? "Update" : "Add"}
+                            <div className="table-actions">
+                                <button
+                                    type="button"
+                                    className="primary-btn"
+                                    onClick={handleShowAddPage}
+                                >
+                                    Add Employee
+                                </button>
+
+                                <p className="employee-count">Employee Count: {totalCount}</p>
+
+                                <input
+                                    className="search"
+                                    placeholder="Search employees..."
+                                    value={searchText}
+                                    onChange={handleSearchChange}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Id</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Designation</th>
+                                        <th>Date of Joining</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan="6" className="empty">
+                                                Loading employees...
+                                            </td>
+                                        </tr>
+                                    ) : employees.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="empty">
+                                                No employees found
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        employees.map((employee) => (
+                                            <tr key={employee.id}>
+                                                <td>{employee.id}</td>
+                                                <td>
+                                                    {cleanName(employee.firstName)}{" "}
+                                                    {cleanName(employee.lastName)}
+                                                </td>
+                                                <td>{employee.email}</td>
+                                                <td>{employee.designation}</td>
+                                                <td>{employee.dateOfJoining?.split("T")[0]}</td>
+                                                <td>
+                                                    <div className="action-buttons">
+                                                        <button
+                                                            className="edit-btn"
+                                                            onClick={() => handleEdit(employee)}
+                                                        >
+                                                            Edit
+                                                        </button>
+
+                                                        <button
+                                                            className="delete-btn"
+                                                            onClick={() => handleDelete(employee)}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="pagination">
+                            <button
+                                type="button"
+                                className="secondary-btn"
+                                disabled={pageNumber <= 1 || isLoading}
+                                onClick={() => setPageNumber((current) => Math.max(current - 1, 1))}
+                            >
+                                Previous
                             </button>
 
-                            {isEditing && (
-                                <button type="button" className="secondary-btn" onClick={handleCancel}>
-                                    Cancel
-                                </button>
-                            )}
+                            <span>
+                                Page {pageNumber} of {Math.max(totalPages, 1)}
+                            </span>
+
+                            <button
+                                type="button"
+                                className="secondary-btn"
+                                disabled={pageNumber >= totalPages || isLoading}
+                                onClick={() => setPageNumber((current) => current + 1)}
+                            >
+                                Next
+                            </button>
                         </div>
-                    </form>
-                </section>
-
-                <section className="card table-card">
-                    <div className="table-header">
-                        <h2>Employees</h2>
-
-                        <input
-                            className="search"
-                            placeholder="Search employees..."
-                            value={searchText}
-                            onChange={(e) => setSearchText(e.target.value)}
-                        />
-                    </div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Id</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Designation</th>
-                                <th>Date of Joining</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {filteredEmployees.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="empty">
-                                        No employees found
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredEmployees.map((employee) => (
-                                    <tr key={employee.id}>
-                                        <td>{employee.id}</td>
-                                        <td>
-                                            {employee.firstName} {employee.lastName}
-                                        </td>
-                                        <td>{employee.email}</td>
-                                        <td>{employee.designation}</td>
-                                        <td>{employee.dateOfJoining?.split("T")[0]}</td>
-                                        <td>
-                                            <button
-                                                className="edit-btn"
-                                                onClick={() => handleEdit(employee)}
-                                            >
-                                                Edit
-                                            </button>
-
-                                            <button
-                                                className="delete-btn"
-                                                onClick={() => handleDelete(employee.id)}
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </section>
+                    </section>
+                )}
             </main>
+
+            {employeeToDelete && (
+                <div className="modal-backdrop" role="presentation">
+                    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+                        <h2 id="delete-title">Delete Employee</h2>
+                        <p>
+                            Are you sure you want to delete {cleanName(employeeToDelete.firstName)}{" "}
+                            {cleanName(employeeToDelete.lastName)}?
+                        </p>
+
+                        <div className="modal-actions">
+                            <button
+                                type="button"
+                                className="secondary-btn"
+                                onClick={handleCloseDeleteModal}
+                                disabled={isSaving}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="delete-btn"
+                                onClick={handleConfirmDelete}
+                                disabled={isSaving}
+                            >
+                                {isSaving ? "Deleting..." : "Delete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,4 +1,5 @@
-﻿using HRConnect.Application.Interfaces;
+using HRConnect.Application.Interfaces;
+using HRConnect.Application.Models;
 using HRConnect.Domain.Entities;
 
 namespace HRConnect.Application.Services;
@@ -12,14 +13,19 @@ public class EmployeeService : IEmployeeService
         _employeeRepository = employeeRepository;
     }
 
-    public async Task<IEnumerable<Employee>> GetAllEmployeesAsync()
+    public async Task<PagedResult<Employee>> GetEmployeesAsync(string? search, int pageNumber, int pageSize)
     {
-        return await _employeeRepository.GetAllAsync();
+        return await _employeeRepository.GetAllAsync(search, pageNumber, pageSize);
     }
 
     public async Task<Employee?> GetEmployeeByIdAsync(int id)
     {
         return await _employeeRepository.GetByIdAsync(id);
+    }
+
+    public async Task<bool> EmailExistsAsync(string email, int? excludingEmployeeId = null)
+    {
+        return await _employeeRepository.EmailExistsAsync(email, excludingEmployeeId);
     }
 
     public async Task AddEmployeeAsync(Employee employee)

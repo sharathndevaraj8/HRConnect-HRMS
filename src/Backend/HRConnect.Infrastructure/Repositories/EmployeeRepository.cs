@@ -1,4 +1,5 @@
-﻿using HRConnect.Application.Interfaces;
+using HRConnect.Application.Interfaces;
+using HRConnect.Application.Models;
 using HRConnect.Domain.Entities;
 using HRConnect.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -31,11 +32,35 @@ public class EmployeeRepository : IEmployeeRepository
         }
     }
 
-    public async Task<IEnumerable<Employee>> GetAllAsync()
+    public async Task<PagedResult<Employee>> GetAllAsync(string? search, int pageNumber, int pageSize)
     {
-        return await _context.Employees
-            .AsNoTracking()
+        var query = _context.Employees.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var trimmedSearch = search.Trim();
+
+            query = query.Where(employee =>
+                employee.FirstName.Contains(trimmedSearch) ||
+                employee.LastName.Contains(trimmedSearch) ||
+                employee.Email.Contains(trimmedSearch) ||
+                employee.Designation.Contains(trimmedSearch));
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(employee => employee.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResult<Employee>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
     public async Task<Employee?> GetByIdAsync(int id)
@@ -43,6 +68,15 @@ public class EmployeeRepository : IEmployeeRepository
         return await _context.Employees
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id);
+    }
+
+    public async Task<bool> EmailExistsAsync(string email, int? excludingEmployeeId = null)
+    {
+        var normalizedEmail = email.Trim().ToLower();
+
+        return await _context.Employees.AnyAsync(employee =>
+            employee.Email.ToLower() == normalizedEmail &&
+            (!excludingEmployeeId.HasValue || employee.Id != excludingEmployeeId.Value));
     }
 
     public async Task UpdateAsync(Employee employee)
