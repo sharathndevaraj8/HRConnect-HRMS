@@ -32,6 +32,8 @@ Thumbs.db
 
 # Publish output
 publish/
+.azure-deploy/
+.tools/
 
 # Private employee document uploads (metadata is stored in the database)
 src/Backend/HRConnect.API/App_Data/employee-documents/
