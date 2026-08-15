@@ -34,7 +34,10 @@ public class EmployeeRepository : IEmployeeRepository
 
     public async Task<PagedResult<Employee>> GetAllAsync(string? search, int pageNumber, int pageSize)
     {
-        var query = _context.Employees.AsNoTracking();
+        IQueryable<Employee> query = _context.Employees
+            .AsNoTracking()
+            .Include(employee => employee.Department)
+            .Include(employee => employee.Manager);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -44,7 +47,9 @@ public class EmployeeRepository : IEmployeeRepository
                 employee.FirstName.Contains(trimmedSearch) ||
                 employee.LastName.Contains(trimmedSearch) ||
                 employee.Email.Contains(trimmedSearch) ||
-                employee.Designation.Contains(trimmedSearch));
+                employee.EmployeeCode.Contains(trimmedSearch) ||
+                employee.Designation.Contains(trimmedSearch) ||
+                (employee.Department != null && employee.Department.Name.Contains(trimmedSearch)));
         }
 
         var totalCount = await query.CountAsync();
@@ -67,6 +72,8 @@ public class EmployeeRepository : IEmployeeRepository
     {
         return await _context.Employees
             .AsNoTracking()
+            .Include(employee => employee.Department)
+            .Include(employee => employee.Manager)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
 

@@ -48,9 +48,20 @@ public sealed class RefreshTokenCleanupService : BackgroundService
                     (refreshToken.RevokedAtUtc != null && refreshToken.RevokedAtUtc < retentionCutoffUtc))
                 .ExecuteDeleteAsync(cancellationToken);
 
+            var deletedPasswordResetCount = await dbContext.PasswordResetTokens
+                .Where(token =>
+                    token.ExpiresAtUtc < retentionCutoffUtc ||
+                    (token.UsedAtUtc != null && token.UsedAtUtc < retentionCutoffUtc))
+                .ExecuteDeleteAsync(cancellationToken);
+
             if (deletedCount > 0)
             {
                 _logger.LogInformation("Deleted {DeletedCount} old refresh tokens.", deletedCount);
+            }
+
+            if (deletedPasswordResetCount > 0)
+            {
+                _logger.LogInformation("Deleted {DeletedCount} old password-reset tokens.", deletedPasswordResetCount);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

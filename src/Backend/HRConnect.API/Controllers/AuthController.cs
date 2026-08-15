@@ -6,7 +6,9 @@ using HRConnect.Application.Models;
 using HRConnect.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using Google.Apis.Auth;
 
 namespace HRConnect.API.Controllers;
 
@@ -18,15 +20,89 @@ public sealed class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly JwtOptions _jwtOptions;
+    private readonly GoogleAuthOptions _googleAuthOptions;
+    private readonly PasswordResetOptions _passwordResetOptions;
+    private readonly IPasswordResetEmailSender _passwordResetEmailSender;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAuthService authService,
         IJwtTokenService jwtTokenService,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        IOptions<GoogleAuthOptions> googleAuthOptions,
+        IOptions<PasswordResetOptions> passwordResetOptions,
+        IPasswordResetEmailSender passwordResetEmailSender,
+        IWebHostEnvironment environment,
+        ILogger<AuthController> logger)
     {
         _authService = authService;
         _jwtTokenService = jwtTokenService;
         _jwtOptions = jwtOptions.Value;
+        _googleAuthOptions = googleAuthOptions.Value;
+        _passwordResetOptions = passwordResetOptions.Value;
+        _passwordResetEmailSender = passwordResetEmailSender;
+        _environment = environment;
+        _logger = logger;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("google/config")]
+    public IActionResult GetGoogleConfig()
+    {
+        return Ok(new
+        {
+            enabled = !string.IsNullOrWhiteSpace(_googleAuthOptions.ClientId),
+            clientId = _googleAuthOptions.ClientId
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("google")]
+    public async Task<ActionResult<LoginResponseDto>> GoogleLogin(GoogleLoginRequestDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(_googleAuthOptions.ClientId))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: "Google login is not configured.");
+        }
+
+        try
+        {
+            var payload = await GoogleJsonWebSignature.ValidateAsync(
+                dto.Credential,
+                new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = [_googleAuthOptions.ClientId]
+                });
+
+            if (!payload.EmailVerified || string.IsNullOrWhiteSpace(payload.Email))
+            {
+                return Unauthorized(new { message = "Google did not provide a verified email address." });
+            }
+
+            var fullName = string.IsNullOrWhiteSpace(payload.Name)
+                ? payload.Email.Split('@')[0]
+                : payload.Name;
+            var user = await _authService.FindOrCreateExternalUserAsync(
+                "Google",
+                payload.Subject,
+                fullName,
+                payload.Email);
+            var refreshToken = await _authService.IssueRefreshTokenAsync(user, _jwtOptions.RefreshTokenDays);
+            SetRefreshTokenCookie(refreshToken);
+
+            return Ok(CreateLoginResponse(user));
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized(new { message = "The Google sign-in credential is invalid or expired." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -72,6 +148,55 @@ public sealed class AuthController : ControllerBase
         {
             return Conflict(new { message = ex.Message });
         }
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("password-reset")]
+    [HttpPost("forgot-password")]
+    public async Task<ActionResult<ForgotPasswordResponseDto>> ForgotPassword(
+        ForgotPasswordRequestDto dto,
+        CancellationToken cancellationToken)
+    {
+        const string genericMessage = "If an active account uses that email, a password-reset link has been prepared.";
+        var issue = await _authService.CreatePasswordResetAsync(
+            dto.Email.Trim(),
+            _passwordResetOptions.TokenLifetimeMinutes);
+
+        string? developmentResetUrl = null;
+        if (issue != null)
+        {
+            var resetUrl = $"{_passwordResetOptions.FrontendBaseUrl.TrimEnd('/')}/?resetToken={Uri.EscapeDataString(issue.Token)}";
+            var delivered = await _passwordResetEmailSender.SendAsync(
+                issue.Email,
+                issue.FullName,
+                resetUrl,
+                issue.ExpiresAtUtc,
+                cancellationToken);
+
+            if (!delivered && _environment.IsDevelopment())
+                developmentResetUrl = resetUrl;
+            else if (!delivered)
+                _logger.LogError("A password-reset link could not be delivered because email is not configured or delivery failed.");
+        }
+
+        return Ok(new ForgotPasswordResponseDto
+        {
+            Message = genericMessage,
+            DevelopmentResetUrl = developmentResetUrl
+        });
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("password-reset")]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequestDto dto)
+    {
+        var succeeded = await _authService.ResetPasswordAsync(dto.Token, dto.NewPassword);
+        if (!succeeded)
+            return BadRequest(new { message = "This password-reset link is invalid, expired, or has already been used." });
+
+        ClearRefreshTokenCookie();
+        return Ok(new { message = "Your password has been reset. Sign in with your new password." });
     }
 
     /// <summary>
@@ -168,7 +293,8 @@ public sealed class AuthController : ControllerBase
             Id = user.Id,
             Email = user.Email,
             FullName = user.FullName,
-            Role = user.Role
+            Role = user.Role,
+            EmployeeId = user.EmployeeId
         };
     }
 }
