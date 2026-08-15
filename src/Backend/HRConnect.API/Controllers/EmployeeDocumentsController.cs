@@ -18,10 +18,16 @@ public sealed class EmployeeDocumentsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly string _storageRoot;
 
-    public EmployeeDocumentsController(AppDbContext db, IWebHostEnvironment environment)
+    public EmployeeDocumentsController(
+        AppDbContext db,
+        IWebHostEnvironment environment,
+        IConfiguration configuration)
     {
         _db = db;
-        _storageRoot = Path.Combine(environment.ContentRootPath, "App_Data", "employee-documents");
+        var configuredRoot = configuration["DocumentStorage:RootPath"];
+        _storageRoot = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(environment.ContentRootPath, "App_Data", "employee-documents")
+            : Path.GetFullPath(configuredRoot);
     }
 
     [HttpGet]
@@ -36,10 +42,11 @@ public sealed class EmployeeDocumentsController : ControllerBase
 
     [HttpPost]
     [RequestSizeLimit(MaxFileSize)]
+    [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload(
         int employeeId,
         [FromForm] string documentType,
-        [FromForm] IFormFile file,
+        IFormFile file,
         [FromForm] string? notes)
     {
         var userId = GetCurrentUserId();

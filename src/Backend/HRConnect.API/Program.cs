@@ -106,9 +106,15 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' was not found.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+        connectionString,
+        sqlOptions => sqlOptions.EnableRetryOnFailure()));
 
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
@@ -137,19 +143,34 @@ builder.Services.AddCors(options =>
 });
 var app = builder.Build();
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-if (app.Environment.IsDevelopment())
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 {
-    app.MapOpenApi();
-
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    await using var scope = app.Services.CreateAsyncScope();
+    var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await database.Database.MigrateAsync();
 }
-app.UseCors("ReactPolicy");
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseCors("ReactPolicy");
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapOpenApi();
+
+app.MapGet("/", () =>
+    Results.Redirect("/swagger/index.html"));
 
 app.MapControllers();
 
