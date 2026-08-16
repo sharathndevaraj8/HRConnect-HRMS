@@ -77,6 +77,13 @@ public class EmployeeRepository : IEmployeeRepository
             .FirstOrDefaultAsync(e => e.Id == id);
     }
 
+    public async Task<Employee?> GetByEmailAsync(string email)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        return await _context.Employees.AsNoTracking()
+            .FirstOrDefaultAsync(employee => employee.Email.ToLower() == normalizedEmail);
+    }
+
     public async Task<bool> EmailExistsAsync(string email, int? excludingEmployeeId = null)
     {
         var normalizedEmail = email.Trim().ToLower();

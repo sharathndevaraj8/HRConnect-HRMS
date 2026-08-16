@@ -8,6 +8,7 @@ namespace HRConnect.Application.Services;
 public sealed class AuthService : IAuthService
 {
     private readonly IUserAccountRepository _userAccountRepository;
+    private readonly IEmployeeRepository _employeeRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IRefreshTokenProtector _refreshTokenProtector;
@@ -15,12 +16,14 @@ public sealed class AuthService : IAuthService
 
     public AuthService(
         IUserAccountRepository userAccountRepository,
+        IEmployeeRepository employeeRepository,
         IRefreshTokenRepository refreshTokenRepository,
         IPasswordHasher passwordHasher,
         IRefreshTokenProtector refreshTokenProtector,
         IPasswordResetRepository passwordResetRepository)
     {
         _userAccountRepository = userAccountRepository;
+        _employeeRepository = employeeRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _passwordHasher = passwordHasher;
         _refreshTokenProtector = refreshTokenProtector;
@@ -123,8 +126,29 @@ public sealed class AuthService : IAuthService
             return existingUser;
         }
 
-        throw new InvalidOperationException(
-            "You do not have an HRConnect employee account. Please contact your administrator.");
+        var employee = await _employeeRepository.GetByEmailAsync(cleanedEmail);
+        if (employee == null)
+            throw new InvalidOperationException(
+                "You do not have an HRConnect employee account. Please contact your administrator.");
+
+        var employeeUser = new UserAccount
+        {
+            FullName = string.IsNullOrWhiteSpace(fullName) ? $"{employee.FirstName} {employee.LastName}" : fullName.Trim(),
+            Email = cleanedEmail,
+            NormalizedEmail = cleanedEmail.ToUpperInvariant(),
+            Role = "Employee",
+            EmployeeId = employee.Id,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        await _userAccountRepository.AddExternalUserAsync(employeeUser, new ExternalLogin
+        {
+            Provider = normalizedProvider,
+            ProviderSubject = normalizedSubject,
+            ProviderEmail = cleanedEmail,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        return employeeUser;
     }
 
     public async Task<RefreshTokenIssue> IssueRefreshTokenAsync(UserAccount user, int lifetimeDays)

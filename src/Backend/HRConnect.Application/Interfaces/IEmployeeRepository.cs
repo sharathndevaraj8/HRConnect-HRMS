@@ -9,6 +9,8 @@ public interface IEmployeeRepository
 
     Task<Employee?> GetByIdAsync(int id);
 
+    Task<Employee?> GetByEmailAsync(string email);
+
     Task<bool> EmailExistsAsync(string email, int? excludingEmployeeId = null);
 
     Task AddAsync(Employee employee);

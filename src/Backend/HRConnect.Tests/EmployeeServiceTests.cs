@@ -17,6 +17,7 @@ public sealed class EmployeeServiceTests
         public Employee? Employee { get; init; } public bool EmailExists { get; init; } public int? ExcludedId { get; private set; } public bool Added { get; private set; }
         public Task<PagedResult<Employee>> GetAllAsync(string? s,int p,int z) => Task.FromResult(new PagedResult<Employee>());
         public Task<Employee?> GetByIdAsync(int id) => Task.FromResult(Employee?.Id == id ? Employee : null);
+        public Task<Employee?> GetByEmailAsync(string email) => Task.FromResult<Employee?>(null);
         public Task<bool> EmailExistsAsync(string e,int? id=null) { ExcludedId=id; return Task.FromResult(EmailExists); }
         public Task AddAsync(Employee e) { Added=true; return Task.CompletedTask; } public Task UpdateAsync(Employee e)=>Task.CompletedTask; public Task DeleteAsync(int id)=>Task.CompletedTask;
     }
