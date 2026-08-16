@@ -10,9 +10,30 @@ on:
       - main
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/Frontend/hrconnect-ui/package-lock.json
+      - run: dotnet test src/Backend/HRConnect.slnx
+      - run: npm ci
+        working-directory: src/Frontend/hrconnect-ui
+      - run: npx playwright install --with-deps chromium
+        working-directory: src/Frontend/hrconnect-ui
+      - run: npm run test:e2e
+        working-directory: src/Frontend/hrconnect-ui
+
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
+    needs: test
     name: Build and Deploy Job
     steps:
       - uses: actions/checkout@v3
