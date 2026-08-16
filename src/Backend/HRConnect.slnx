@@ -3,4 +3,5 @@
   <Project Path="HRConnect.Application/HRConnect.Application.csproj" />
   <Project Path="HRConnect.Domain/HRConnect.Domain.csproj" />
   <Project Path="HRConnect.Infrastructure/HRConnect.Infrastructure.csproj" />
+  <Project Path="HRConnect.Tests/HRConnect.Tests.csproj" />
 </Solution>

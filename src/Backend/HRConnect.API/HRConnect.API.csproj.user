@@ -2,6 +2,6 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ActiveDebugProfile>https</ActiveDebugProfile>
-    <NameOfLastUsedPublishProfile>C:\HRConnect-HRMS\.github\workflows\azure-static-web-apps-yellow-ground-0709fd410.yml</NameOfLastUsedPublishProfile>
+    <NameOfLastUsedPublishProfile>C:\HRConnect-HRMS\src\Backend\HRConnect.API\Properties\PublishProfiles\hrconnect-api-sharath - Zip Deploy.pubxml</NameOfLastUsedPublishProfile>
   </PropertyGroup>
 </Project>
