@@ -5,7 +5,7 @@ HRConnect is a React and ASP.NET Core HR management application for employee rec
 ## Live deployment
 
 - Frontend: https://yellow-ground-0709fd410.5.azurestaticapps.net
-- API: https://hrconnect-api-sharath-b8cngsa2bsa3cbgc.indiasouthcentral-01.azurewebsites.net
+- API: https://hrconnectapi-d2bbatcedeg0a7ht.indiasouthcentral-01.azurewebsites.net
 
 ## Architecture
 
