@@ -127,11 +127,34 @@ body {
 }
 
 .auth-card {
+    position: relative;
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 24px;
     box-shadow: 0 18px 44px rgba(31, 41, 55, 0.14);
+}
+
+.api-status-banner {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    background: #fffbeb;
+    color: #92400e;
+    font-weight: 700;
+}
+
+.auth-progress-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.86);
+    color: #065f46;
+    font-weight: 800;
 }
 
 .auth-tabs {
@@ -225,6 +248,11 @@ body {
 
 .google-signin-hidden {
     display: none;
+}
+
+.google-signin-disabled {
+    pointer-events: none;
+    opacity: 0.55;
 }
 
 .google-fallback {

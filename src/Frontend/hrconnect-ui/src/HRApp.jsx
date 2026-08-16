@@ -189,6 +189,7 @@ function HRApp() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [isApiAvailable, setIsApiAvailable] = useState(true);
     const [employeeToDelete, setEmployeeToDelete] = useState(null);
     const [profileEmployeeId, setProfileEmployeeId] = useState(null);
     const googleButtonRef = useRef(null);
@@ -200,6 +201,12 @@ function HRApp() {
         }
         // restoreSession intentionally runs only at startup or after a full logout.
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const updateApiStatus = event => setIsApiAvailable(event.detail.available);
+        window.addEventListener("hrconnect-api-status", updateApiStatus);
+        return () => window.removeEventListener("hrconnect-api-status", updateApiStatus);
     }, []);
 
     useEffect(() => {
@@ -422,6 +429,8 @@ function HRApp() {
     }
 
     async function handleGoogleCredential(response) {
+        if (isAuthenticating) return;
+
         if (!response?.credential) {
             setErrorMessage("Google sign-in did not return a credential.");
             return;
@@ -515,7 +524,8 @@ function HRApp() {
                         <p>Sign in to manage employee records with protected API access.</p>
                     </div>
 
-                    <div className="auth-card">
+                    <div className="auth-card" aria-busy={isAuthenticating}>
+                        {isAuthenticating && <div className="auth-progress-overlay" role="status" aria-live="polite">Signing in securely…</div>}
                         <div className="auth-tabs" role="tablist" aria-label="Authentication">
                             <button
                                 type="button"
@@ -545,7 +555,7 @@ function HRApp() {
                         {!isForgotPassword && !isResetPassword && <>
                             <div
                                 ref={googleButtonRef}
-                                className={`google-signin ${googleLoginStatus === "ready" ? "" : "google-signin-hidden"}`}
+                                className={`google-signin ${googleLoginStatus === "ready" ? "" : "google-signin-hidden"} ${isAuthenticating ? "google-signin-disabled" : ""}`}
                                 aria-label="Continue with Google"
                             />
                             {googleLoginStatus !== "ready" && (
@@ -770,6 +780,7 @@ function HRApp() {
             </header>
 
             <main className="container">
+                {!isApiAvailable && <p className="api-status-banner" role="alert">HRConnect services are currently unavailable. Your changes have not been saved; please try again shortly.</p>}
                 {successMessage && <p className="success-message">{successMessage}</p>}
                 {errorMessage && <p className="error-message">{errorMessage}</p>}
 

@@ -8,6 +8,10 @@ const api = axios.create({
     withCredentials: true,
 });
 
+function setApiAvailability(available) {
+    window.dispatchEvent(new CustomEvent("hrconnect-api-status", { detail: { available } }));
+}
+
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem("hrconnect_token");
 
@@ -19,8 +23,12 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        setApiAvailability(true);
+        return response;
+    },
     async (error) => {
+        if (!error.response || error.response.status >= 500) setApiAvailability(false);
         const originalRequest = error.config;
         const isAuthEndpoint = originalRequest?.url?.startsWith("/auth/");
 
