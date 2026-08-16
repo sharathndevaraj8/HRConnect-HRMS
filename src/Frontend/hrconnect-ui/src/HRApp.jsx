@@ -204,13 +204,22 @@ function HRApp() {
 
     useEffect(() => {
         if (currentUser) {
-            loadEmployees();
-            loadDepartments();
+            if (["HR", "Admin"].includes(currentUser.role)) {
+                loadEmployees();
+                loadDepartments();
+            }
             if (["HR", "Admin"].includes(currentUser.role)) loadEmployeeOptions();
         }
         // loadEmployees closes over the current pagination/search state by design.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser, pageNumber, searchText]);
+
+    useEffect(() => {
+        if (currentUser?.role === "Employee" && currentPage === "list") {
+            setCurrentPage(currentUser.employeeId ? "profile" : "leave");
+            setProfileEmployeeId(currentUser.employeeId ?? null);
+        }
+    }, [currentUser, currentPage]);
 
     async function loadDepartments() {
         try { setDepartments(await getDepartments(false)); }
@@ -548,6 +557,9 @@ function HRApp() {
                             {googleLoginStatus === "unavailable" && (
                                 <p className="google-status">Google login needs a client ID and a running API.</p>
                             )}
+                            <p className="google-access-notice">
+                                Google sign-in is available only to registered HRConnect employees and approved users. Contact your administrator if you need access.
+                            </p>
                             <div className="auth-divider"><span>or use email</span></div>
                         </>}
 
@@ -743,8 +755,8 @@ function HRApp() {
                     <p>People operations workspace</p>
                 </div>
                 <nav className="main-nav" aria-label="HRConnect modules">
-                    <button className={currentPage === "list" ? "active" : ""} onClick={() => setCurrentPage("list")}>Employees</button>
-                    <button className={currentPage === "departments" ? "active" : ""} onClick={() => setCurrentPage("departments")}>Departments</button>
+                    {canManagePeople && <button className={currentPage === "list" ? "active" : ""} onClick={() => setCurrentPage("list")}>Employees</button>}
+                    {canManagePeople && <button className={currentPage === "departments" ? "active" : ""} onClick={() => setCurrentPage("departments")}>Departments</button>}
                     <button className={currentPage === "leave" ? "active" : ""} onClick={() => setCurrentPage("leave")}>Leave</button>
                     {canManagePeople && <button className={currentPage === "users" ? "active" : ""} onClick={() => setCurrentPage("users")}>Users & roles</button>}
                     {currentUser.employeeId && <button onClick={() => { setProfileEmployeeId(currentUser.employeeId); setCurrentPage("profile"); }}>My profile</button>}
@@ -764,7 +776,7 @@ function HRApp() {
                 {currentPage === "departments" && <DepartmentsPage canManage={canManagePeople} onError={showError} onSuccess={showSuccess} />}
                 {currentPage === "leave" && <LeavePage currentUser={currentUser} employees={employeeOptions} canManagePolicy={canManagePeople} canReview={canReviewLeave} onError={showError} onSuccess={showSuccess} />}
                 {currentPage === "users" && canManagePeople && <UsersPage employees={employeeOptions} isAdmin={isAdmin} onError={showError} onSuccess={showSuccess} />}
-                {currentPage === "profile" && profileEmployeeId && <EmployeeProfilePage employeeId={profileEmployeeId} currentUser={currentUser} onBack={() => setCurrentPage("list")} onEdit={(employee) => { setUpdateFormData(employeeToForm(employee)); setCurrentPage("update"); }} onError={showError} onSuccess={showSuccess} />}
+                {currentPage === "profile" && profileEmployeeId && <EmployeeProfilePage employeeId={profileEmployeeId} currentUser={currentUser} onBack={() => setCurrentPage(canManagePeople ? "list" : "leave")} onEdit={(employee) => { setUpdateFormData(employeeToForm(employee)); setCurrentPage("update"); }} onError={showError} onSuccess={showSuccess} />}
 
                 {currentPage === "add" && (
                     <section className="card page-card">
@@ -816,7 +828,7 @@ function HRApp() {
                     </section>
                 )}
 
-                {currentPage === "list" && (
+                {currentPage === "list" && canManagePeople && (
                     <section className="card table-card">
                         <div className="table-header">
                             <h2>Employees</h2>

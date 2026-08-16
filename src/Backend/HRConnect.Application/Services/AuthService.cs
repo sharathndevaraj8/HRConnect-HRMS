@@ -80,11 +80,7 @@ public sealed class AuthService : IAuthService
 
         var normalizedProvider = provider.Trim().ToLowerInvariant();
         var normalizedSubject = providerSubject.Trim();
-        var normalizedEmail = email.Trim().ToUpperInvariant();
         var cleanedEmail = email.Trim().ToLowerInvariant();
-        var cleanedFullName = string.Join(
-            ' ',
-            fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
 
         var externalUser = await _userAccountRepository.GetByExternalLoginAsync(
             normalizedProvider,
@@ -127,28 +123,8 @@ public sealed class AuthService : IAuthService
             return existingUser;
         }
 
-        var user = new UserAccount
-        {
-            FullName = string.IsNullOrWhiteSpace(cleanedFullName)
-                ? cleanedEmail.Split('@')[0]
-                : cleanedFullName,
-            Email = cleanedEmail,
-            NormalizedEmail = normalizedEmail,
-            PasswordHash = null,
-            Role = "Employee",
-            IsActive = true,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await _userAccountRepository.AddExternalUserAsync(user, new ExternalLogin
-        {
-            Provider = normalizedProvider,
-            ProviderSubject = normalizedSubject,
-            ProviderEmail = cleanedEmail,
-            CreatedAtUtc = DateTime.UtcNow
-        });
-
-        return user;
+        throw new InvalidOperationException(
+            "You do not have an HRConnect employee account. Please contact your administrator.");
     }
 
     public async Task<RefreshTokenIssue> IssueRefreshTokenAsync(UserAccount user, int lifetimeDays)

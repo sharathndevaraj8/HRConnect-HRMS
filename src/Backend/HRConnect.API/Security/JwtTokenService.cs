@@ -23,7 +23,7 @@ public sealed class JwtTokenService : IJwtTokenService
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -32,6 +32,9 @@ public sealed class JwtTokenService : IJwtTokenService
             new Claim(ClaimTypes.Role, user.Role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        if (user.EmployeeId.HasValue)
+            claims.Add(new Claim("employee_id", user.EmployeeId.Value.ToString()));
 
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,

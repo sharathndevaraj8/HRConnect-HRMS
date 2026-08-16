@@ -101,6 +101,12 @@ public sealed class EmployeeDocumentsController : ControllerBase
 
     private async Task<bool> CanAccessAsync(int employeeId)
     {
+        if (User.IsInRole("Admin")) return true;
+
+        var employeeIdClaim = User.FindFirstValue("employee_id");
+        if (int.TryParse(employeeIdClaim, out var claimedEmployeeId))
+            return claimedEmployeeId == employeeId;
+
         var userId = GetCurrentUserId();
         return userId.HasValue && await _db.UserAccounts.AnyAsync(x => x.Id == userId && x.EmployeeId == employeeId);
     }

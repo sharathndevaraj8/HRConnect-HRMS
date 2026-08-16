@@ -24,6 +24,7 @@ public sealed class EmployeesController : ControllerBase
         _dbContext = dbContext;
     }
 
+    [Authorize(Roles = "HR,Admin")]
     [HttpGet]
     public async Task<ActionResult> GetAll(
         [FromQuery] string? search,
@@ -178,9 +179,20 @@ public sealed class EmployeesController : ControllerBase
 
     private async Task<bool> IsLinkedEmployeeAsync(int employeeId)
     {
+        if (User.IsInRole("Admin")) return true;
+
+        var claimedEmployeeId = GetClaimedEmployeeId();
+        if (claimedEmployeeId.HasValue) return claimedEmployeeId == employeeId;
+
         var userId = GetCurrentUserId();
         return userId.HasValue && await _dbContext.UserAccounts
             .AnyAsync(x => x.Id == userId && x.EmployeeId == employeeId);
+    }
+
+    private int? GetClaimedEmployeeId()
+    {
+        var value = User.FindFirstValue("employee_id");
+        return int.TryParse(value, out var id) ? id : null;
     }
 
     private int? GetCurrentUserId()

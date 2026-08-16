@@ -28,11 +28,12 @@ export default function PrivateEmployeeProfilePage({ employeeId, currentUser, on
     const [isSavingPersonal, setIsSavingPersonal] = useState(false);
     const canManageWork = ["HR", "Admin"].includes(currentUser.role);
     const isSelf = Number(currentUser.employeeId) === Number(employeeId);
+    const canManagePrivateData = isSelf || currentUser.role === "Admin";
 
     async function load() {
         try {
             setEmployee(await getEmployee(employeeId));
-            if (isSelf) {
+            if (canManagePrivateData) {
                 const [details, employeeDocuments] = await Promise.all([getPersonalEmployee(employeeId), getEmployeeDocuments(employeeId)]);
                 setPersonal(personalToForm(details));
                 setDocuments(employeeDocuments);
@@ -40,7 +41,7 @@ export default function PrivateEmployeeProfilePage({ employeeId, currentUser, on
         } catch (error) { onError(error?.response?.data?.message ?? "Unable to load employee profile."); }
     }
 
-    useEffect(() => { const timer = setTimeout(load, 0); return () => clearTimeout(timer); }, [employeeId, isSelf]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { const timer = setTimeout(load, 0); return () => clearTimeout(timer); }, [employeeId, canManagePrivateData]); // eslint-disable-line react-hooks/exhaustive-deps
 
     async function savePersonalDetails(event) {
         event.preventDefault(); setIsSavingPersonal(true);
@@ -71,7 +72,7 @@ export default function PrivateEmployeeProfilePage({ employeeId, currentUser, on
             <div className="button-row"><button className="secondary-btn" onClick={onBack}>Back</button>{canManageWork && <button className="primary-btn" onClick={() => onEdit(employee)}>Edit work details</button>}</div></section>
         <section className="card"><h3>Employment information</h3><div className="detail-grid">{workFields.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value || "-"}</strong></div>)}</div></section>
 
-        {isSelf ? <section className="card"><div className="page-header"><div><h3>Your private personal details</h3><p>Only you can retrieve or update this information.</p></div></div>
+        {canManagePrivateData ? <section className="card"><div className="page-header"><div><h3>{isSelf ? "Your private personal details" : "Private personal details"}</h3><p>{isSelf ? "Only you can retrieve or update this information." : "Administrators can manage employee personal details."}</p></div></div>
             <form className="form form-grid" onSubmit={savePersonalDetails}>
                 <label>Phone number<input name="phoneNumber" type="tel" maxLength="20" value={personal.phoneNumber} onChange={updateField} required /></label>
                 <label>Alternate phone<input name="alternatePhoneNumber" type="tel" maxLength="20" value={personal.alternatePhoneNumber} onChange={updateField} /></label>
@@ -89,10 +90,10 @@ export default function PrivateEmployeeProfilePage({ employeeId, currentUser, on
                 <label>Emergency contact name<input name="emergencyContactName" maxLength="100" value={personal.emergencyContactName} onChange={updateField} /></label>
                 <label>Relationship<input name="emergencyContactRelationship" maxLength="50" value={personal.emergencyContactRelationship} onChange={updateField} /></label>
                 <label>Emergency phone<input name="emergencyContactPhone" type="tel" maxLength="20" value={personal.emergencyContactPhone} onChange={updateField} /></label>
-                <div className="span-2"><button className="primary-btn" disabled={isSavingPersonal}>{isSavingPersonal ? "Saving..." : "Save my details"}</button></div>
+                <div className="span-2"><button className="primary-btn" disabled={isSavingPersonal}>{isSavingPersonal ? "Saving..." : isSelf ? "Save my details" : "Save personal details"}</button></div>
             </form></section> : <section className="card"><p className="info-message">Personal details are private and visible only to this employee.</p></section>}
 
-        {isSelf && <section className="card"><div className="page-header"><div><h3>Your secure documents</h3><p>PAN, Aadhaar, profile photos, and other files are accessible only to you.</p></div></div>
+        {canManagePrivateData && <section className="card"><div className="page-header"><div><h3>{isSelf ? "Your secure documents" : "Secure documents"}</h3><p>{isSelf ? "PAN, Aadhaar, profile photos, and other files are accessible only to you." : "Administrators can manage employee documents."}</p></div></div>
             <form className="upload-form" onSubmit={async event => { event.preventDefault(); const file = event.currentTarget.elements.file.files[0]; if (!file) return; try { await uploadEmployeeDocument(employeeId, documentType, file); event.currentTarget.reset(); onSuccess("Document uploaded securely."); await load(); } catch (error) { onError(error?.response?.data?.message ?? "Unable to upload document."); } }}>
                 <select value={documentType} onChange={event => setDocumentType(event.target.value)}>{["PanCard","AadhaarCard","ProfilePhoto","Passport","Education","Employment","Other"].map(type => <option key={type}>{type}</option>)}</select>
                 <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required /><button className="primary-btn">Upload</button>
