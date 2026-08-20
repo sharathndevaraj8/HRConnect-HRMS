@@ -68,6 +68,27 @@ export default function PrivateEmployeeProfilePage({ employeeId, currentUser, on
         }
     }
 
+    async function uploadDocument(event) {
+        event.preventDefault();
+        if (isUploading) return;
+
+        const form = event.currentTarget;
+        const file = form.elements.file.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            await uploadEmployeeDocument(employeeId, documentType, file);
+            form.reset();
+            onSuccess("Document uploaded securely.");
+            await load();
+        } catch (error) {
+            onError(error?.response?.data?.message ?? error?.response?.data?.detail ?? error?.response?.data?.Message ?? "Unable to upload document.");
+        } finally {
+            setIsUploading(false);
+        }
+    }
+
     if (!employee) return <section className="card"><p>Loading employee profile...</p></section>;
     const workFields = [
         ["Employee code", employee.employeeCode], ["Work email", employee.email],
@@ -105,7 +126,7 @@ export default function PrivateEmployeeProfilePage({ employeeId, currentUser, on
             </form></section> : <section className="card"><p className="info-message">Personal details are private and visible only to this employee.</p></section>}
 
         {canManagePrivateData && <section className="card"><div className="page-header"><div><h3>{isSelf ? "Your secure documents" : "Secure documents"}</h3><p>{isSelf ? "PAN, Aadhaar, profile photos, and other files are accessible only to you." : "Administrators can manage employee documents."}</p></div></div>
-            <form className="upload-form" onSubmit={async event => { event.preventDefault(); if (isUploading) return; const file = event.currentTarget.elements.file.files[0]; if (!file) return; setIsUploading(true); try { await uploadEmployeeDocument(employeeId, documentType, file); event.currentTarget.reset(); onSuccess("Document uploaded securely."); await load(); } catch (error) { onError(error?.response?.data?.message ?? error?.response?.data?.detail ?? error?.response?.data?.Message ?? "Unable to upload document."); } finally { setIsUploading(false); } }}>
+            <form className="upload-form" onSubmit={uploadDocument}>
                 <select value={documentType} onChange={event => setDocumentType(event.target.value)} disabled={isUploading}>{["PanCard","AadhaarCard","ProfilePhoto","Passport","Education","Employment","Other"].map(type => <option key={type}>{type}</option>)}</select>
                 <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required disabled={isUploading} /><button className="primary-btn" disabled={isUploading}>{isUploading ? "Uploading..." : "Upload"}</button>
             </form>

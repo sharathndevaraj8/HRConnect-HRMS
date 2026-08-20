@@ -22,6 +22,21 @@ export default function EmployeeProfilePage({ employeeId, currentUser, onBack, o
                 : "Unable to download document. Please try again.");
         }
     }
+    async function uploadDocument(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const file = form.elements.file.files[0];
+        if (!file) return;
+
+        try {
+            await uploadEmployeeDocument(employeeId, documentType, file);
+            form.reset();
+            onSuccess("Document uploaded securely.");
+            await load();
+        } catch (error) {
+            onError(error?.response?.data?.message ?? error?.response?.data?.detail ?? error?.response?.data?.Message ?? "Unable to upload document.");
+        }
+    }
     useEffect(() => { const timer = setTimeout(load, 0); return () => clearTimeout(timer); }, [employeeId]); // eslint-disable-line react-hooks/exhaustive-deps
     if (!employee) return <section className="card"><p>Loading employee profile…</p></section>;
     const fields = [
@@ -37,7 +52,7 @@ export default function EmployeeProfilePage({ employeeId, currentUser, onBack, o
         <div className="button-row"><button className="secondary-btn" onClick={onBack}>Back</button>{canManage && <button className="primary-btn" onClick={() => onEdit(employee)}>Edit profile</button>}</div></section>
         <section className="card"><h3>Personal and employment information</h3><div className="detail-grid">{fields.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value || "—"}</strong></div>)}</div></section>
         {canAccessDocuments && <section className="card"><div className="page-header"><div><h3>Secure documents</h3><p>PAN, Aadhaar and other identity files are visible only to the employee and HR/Admin.</p></div></div>
-            <form className="upload-form" onSubmit={async event => { event.preventDefault(); const file = event.currentTarget.elements.file.files[0]; if (!file) return; try { await uploadEmployeeDocument(employeeId, documentType, file); event.currentTarget.reset(); onSuccess("Document uploaded securely."); await load(); } catch (error) { onError(error?.response?.data?.message ?? error?.response?.data?.detail ?? error?.response?.data?.Message ?? "Unable to upload document."); } }}>
+            <form className="upload-form" onSubmit={uploadDocument}>
                 <select value={documentType} onChange={e => setDocumentType(e.target.value)}>{['PanCard','AadhaarCard','ProfilePhoto','Passport','Education','Employment','Other'].map(type => <option key={type}>{type}</option>)}</select>
                 <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required /><button className="primary-btn">Upload</button>
             </form>
