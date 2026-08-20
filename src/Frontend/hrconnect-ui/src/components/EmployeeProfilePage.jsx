@@ -13,6 +13,15 @@ export default function EmployeeProfilePage({ employeeId, currentUser, onBack, o
             if (canAccessDocuments) setDocuments(await getEmployeeDocuments(employeeId));
         } catch (error) { onError(error?.response?.data?.message ?? "Unable to load employee profile."); }
     }
+    async function downloadDocument(employeeDocument) {
+        try {
+            await downloadEmployeeDocument(employeeId, employeeDocument);
+        } catch (error) {
+            onError(error?.response?.status === 404
+                ? "This document is listed, but its stored file is missing. Upload it again."
+                : "Unable to download document. Please try again.");
+        }
+    }
     useEffect(() => { const timer = setTimeout(load, 0); return () => clearTimeout(timer); }, [employeeId]); // eslint-disable-line react-hooks/exhaustive-deps
     if (!employee) return <section className="card"><p>Loading employee profile…</p></section>;
     const fields = [
@@ -32,7 +41,7 @@ export default function EmployeeProfilePage({ employeeId, currentUser, onBack, o
                 <select value={documentType} onChange={e => setDocumentType(e.target.value)}>{['PanCard','AadhaarCard','ProfilePhoto','Passport','Education','Employment','Other'].map(type => <option key={type}>{type}</option>)}</select>
                 <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required /><button className="primary-btn">Upload</button>
             </form>
-            <div className="document-list">{documents.length === 0 ? <p className="empty">No documents uploaded.</p> : documents.map(doc => <div className="document-item" key={doc.id}><div><strong>{doc.documentType}</strong><span>{doc.originalFileName} · {(doc.fileSize / 1024).toFixed(1)} KB</span></div><div className="action-buttons"><button className="secondary-btn" onClick={() => downloadEmployeeDocument(employeeId, doc)}>Download</button><button className="delete-btn" onClick={async () => { try { await deleteEmployeeDocument(employeeId, doc.id); onSuccess("Document deleted."); await load(); } catch { onError("Unable to delete document."); } }}>Delete</button></div></div>)}</div>
+            <div className="document-list">{documents.length === 0 ? <p className="empty">No documents uploaded.</p> : documents.map(doc => <div className="document-item" key={doc.id}><div><strong>{doc.documentType}</strong><span>{doc.originalFileName} · {(doc.fileSize / 1024).toFixed(1)} KB</span></div><div className="action-buttons"><button type="button" className="secondary-btn" onClick={() => downloadDocument(doc)}>Download</button><button type="button" className="delete-btn" onClick={async () => { try { await deleteEmployeeDocument(employeeId, doc.id); onSuccess("Document deleted."); await load(); } catch { onError("Unable to delete document."); } }}>Delete</button></div></div>)}</div>
         </section>}
     </div>;
 }

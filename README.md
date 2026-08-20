@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-Set the JWT signing key and Google client ID through .NET user secrets or Azure app settings; never commit them.
+Set the JWT signing key through .NET user secrets or Azure app settings; never commit it. The Google OAuth client ID is a public identifier and may be supplied through `GoogleAuth:ClientId` (or the `GoogleAuth__ClientId` Azure app setting). The API exposes that same value to the frontend so both sides always validate against one client ID.
 
 ## Testing
 
@@ -61,6 +61,7 @@ The xUnit suite covers employee service behavior, leave rules, and authorization
 
 - The frontend deploys through Azure Static Web Apps using `.github/workflows/azure-static-web-apps-yellow-ground-0709fd410.yml`.
 - The API deploys to Azure App Service at the live API URL above.
+- Google OAuth requires the frontend's exact production origin in the OAuth client's **Authorized JavaScript origins**. The API and frontend use the client ID configured at `GoogleAuth:ClientId`.
 - Pull requests and pushes to `main` run tests. Deployment depends on the test job, so it cannot run after a failing suite.
 
 ## Scope

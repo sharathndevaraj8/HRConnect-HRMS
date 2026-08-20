@@ -173,8 +173,13 @@ export const downloadEmployeeDocument = async (employeeId, employeeDocument) => 
     const link = document.createElement("a");
     link.href = url;
     link.download = employeeDocument.originalFileName;
+    link.style.display = "none";
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+
+    // Revoking synchronously can cancel the download in some browsers.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 export const deleteEmployeeDocument = async (employeeId, documentId) =>
     api.delete(`/employees/${employeeId}/documents/${documentId}`);
