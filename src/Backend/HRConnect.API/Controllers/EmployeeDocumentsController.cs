@@ -25,9 +25,14 @@ public sealed class EmployeeDocumentsController : ControllerBase
     {
         _db = db;
         var configuredRoot = configuration["DocumentStorage:RootPath"];
-        _storageRoot = string.IsNullOrWhiteSpace(configuredRoot)
-            ? Path.Combine(environment.ContentRootPath, "App_Data", "employee-documents")
-            : Path.GetFullPath(configuredRoot);
+        var appServiceHome = configuration["HOME"];
+        var isAzureAppService = !string.IsNullOrWhiteSpace(configuration["WEBSITE_INSTANCE_ID"]);
+
+        _storageRoot = !string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.GetFullPath(configuredRoot)
+            : isAzureAppService && !string.IsNullOrWhiteSpace(appServiceHome)
+                ? Path.Combine(appServiceHome, "data", "employee-documents")
+                : Path.Combine(environment.ContentRootPath, "App_Data", "employee-documents");
     }
 
     [HttpGet]

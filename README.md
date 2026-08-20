@@ -62,6 +62,7 @@ The xUnit suite covers employee service behavior, leave rules, and authorization
 - The frontend deploys through Azure Static Web Apps using `.github/workflows/azure-static-web-apps-yellow-ground-0709fd410.yml`.
 - The API deploys to Azure App Service at the live API URL above.
 - Google OAuth requires the frontend's exact production origin in the OAuth client's **Authorized JavaScript origins**. The API and frontend use the client ID configured at `GoogleAuth:ClientId`.
+- Employee documents default to `%HOME%/data/employee-documents` on Azure App Service so deployments do not replace uploaded files. `DocumentStorage__RootPath` can override this with an Azure Files mount or another durable absolute path.
 - Pull requests and pushes to `main` run tests. Deployment depends on the test job, so it cannot run after a failing suite.
 
 ## Scope
