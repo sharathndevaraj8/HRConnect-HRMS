@@ -186,6 +186,7 @@ function HRApp() {
     const [totalPages, setTotalPages] = useState(1);
     const [successMessage, setSuccessMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
+    const [notificationVersion, setNotificationVersion] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -205,7 +206,7 @@ function HRApp() {
         });
 
         return () => window.cancelAnimationFrame(frame);
-    }, [successMessage, errorMessage]);
+    }, [successMessage, errorMessage, notificationVersion]);
 
     useEffect(() => {
         if (!currentUser && !initialResetToken) {
@@ -515,11 +516,13 @@ function HRApp() {
     function showSuccess(message) {
         setErrorMessage("");
         setSuccessMessage(message);
+        setNotificationVersion(version => version + 1);
     }
 
     function showError(message) {
         setSuccessMessage("");
         setErrorMessage(message);
+        setNotificationVersion(version => version + 1);
     }
 
     function renderAuth() {
