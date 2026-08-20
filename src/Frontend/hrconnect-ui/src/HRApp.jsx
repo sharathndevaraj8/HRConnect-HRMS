@@ -193,7 +193,19 @@ function HRApp() {
     const [employeeToDelete, setEmployeeToDelete] = useState(null);
     const [profileEmployeeId, setProfileEmployeeId] = useState(null);
     const googleButtonRef = useRef(null);
+    const notificationRef = useRef(null);
     const [googleLoginStatus, setGoogleLoginStatus] = useState("loading");
+
+    useEffect(() => {
+        if (!successMessage && !errorMessage) return;
+
+        const frame = window.requestAnimationFrame(() => {
+            notificationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            notificationRef.current?.focus({ preventScroll: true });
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+    }, [successMessage, errorMessage]);
 
     useEffect(() => {
         if (!currentUser && !initialResetToken) {
@@ -549,8 +561,8 @@ function HRApp() {
                             </button>
                         </div>
 
-                        {successMessage && <p className="success-message">{successMessage}</p>}
-                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                        {successMessage && <p ref={notificationRef} className="success-message" role="status" tabIndex={-1}>{successMessage}</p>}
+                        {errorMessage && <p ref={notificationRef} className="error-message" role="alert" tabIndex={-1}>{errorMessage}</p>}
 
                         {!isForgotPassword && !isResetPassword && <>
                             <div
@@ -781,8 +793,8 @@ function HRApp() {
 
             <main className="container">
                 {!isApiAvailable && <p className="api-status-banner" role="alert">HRConnect services are currently unavailable. Your changes have not been saved; please try again shortly.</p>}
-                {successMessage && <p className="success-message">{successMessage}</p>}
-                {errorMessage && <p className="error-message">{errorMessage}</p>}
+                {successMessage && <p ref={notificationRef} className="success-message" role="status" tabIndex={-1}>{successMessage}</p>}
+                {errorMessage && <p ref={notificationRef} className="error-message" role="alert" tabIndex={-1}>{errorMessage}</p>}
 
                 {currentPage === "departments" && <DepartmentsPage canManage={canManagePeople} onError={showError} onSuccess={showSuccess} />}
                 {currentPage === "leave" && <LeavePage currentUser={currentUser} employees={employeeOptions} canManagePolicy={canManagePeople} canReview={canReviewLeave} onError={showError} onSuccess={showSuccess} />}

@@ -13,6 +13,7 @@ namespace HRConnect.API.Controllers;
 public sealed class EmployeeDocumentsController : ControllerBase
 {
     private const long MaxFileSize = 10 * 1024 * 1024;
+    private const long MaxRequestSize = MaxFileSize + 1024 * 1024;
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "PanCard", "AadhaarCard", "ProfilePhoto", "Passport", "Education", "Employment", "Other" };
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase) { ".pdf", ".jpg", ".jpeg", ".png" };
     private readonly AppDbContext _db;
@@ -46,7 +47,7 @@ public sealed class EmployeeDocumentsController : ControllerBase
     }
 
     [HttpPost]
-    [RequestSizeLimit(MaxFileSize)]
+    [RequestSizeLimit(MaxRequestSize)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload(
         int employeeId,
@@ -63,16 +64,32 @@ public sealed class EmployeeDocumentsController : ControllerBase
         var extension = Path.GetExtension(file.FileName);
         if (!AllowedExtensions.Contains(extension)) return BadRequest(new { message = "Only PDF, JPG, JPEG, and PNG files are allowed." });
 
-        Directory.CreateDirectory(_storageRoot);
-        var storedName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
-        var destination = SafeStoragePath(storedName);
-        await using (var stream = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        string destination;
+        try
+        {
+            Directory.CreateDirectory(_storageRoot);
+            var storedName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+            destination = SafeStoragePath(storedName);
+            await using var stream = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
             await file.CopyToAsync(stream);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: "Document storage is not writable. Configure DocumentStorage__RootPath to a persistent writable directory.");
+        }
+        catch (IOException)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: "Document storage is temporarily unavailable or has reached its quota.");
+        }
 
         var document = new EmployeeDocument
         {
             EmployeeId = employeeId, DocumentType = documentType,
-            OriginalFileName = Path.GetFileName(file.FileName), StoredFileName = storedName,
+            OriginalFileName = Path.GetFileName(file.FileName), StoredFileName = Path.GetFileName(destination),
             ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
             FileSize = file.Length, Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
             UploadedByUserAccountId = userId.Value

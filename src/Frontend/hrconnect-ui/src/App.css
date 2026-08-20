@@ -350,6 +350,7 @@ body {
 }
 
 .success-message {
+    scroll-margin-top: 1rem;
     margin: 0 0 16px;
     padding: 12px 14px;
     border: 1px solid #86efac;
@@ -360,6 +361,7 @@ body {
 }
 
 .error-message {
+    scroll-margin-top: 1rem;
     margin: 0 0 16px;
     padding: 12px 14px;
     border: 1px solid #fecaca;
